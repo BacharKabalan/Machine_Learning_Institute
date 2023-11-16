@@ -8,7 +8,6 @@ import bash_gpt_inference
 import bash_gpt
 
 from torch.autograd import profiler
-from torch.utils.tensorboard import SummaryWriter
 from torch.cuda.amp import autocast, GradScaler
 import torch
 import torch.nn as nn
@@ -96,7 +95,10 @@ for epoch in range(num_epochs):
             'epoch': epoch,
             'model_state_dict': transformer_model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'loss': loss
+            'train_loss': loss,
+            'val_loss': val_loss,
+            'val_acc': val_acc,
+            'bleu_score': bleu_metrics['score']
         }, checkpoint_path)
             val_acc, val_loss, bleu_metrics = bash_gpt_evaluation.evaluation(transformer_model,val_dl,loss_function, device)
             print(f"train_loss: {loss:.4f}, val_loss: {val_loss:.4f}, val_acc: {val_acc:.4f}, bleu_score: {bleu_metrics['score']:4f}")
