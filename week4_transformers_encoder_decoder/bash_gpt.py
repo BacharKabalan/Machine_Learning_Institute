@@ -27,32 +27,34 @@ class positionalEmbeddings(torch.nn.Module):
 
 
 class attention(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, is_causal = False):
         super().__init__()
         #MHA
         self.num_heads = num_heads
         self.head_dim = input_embedding_dimensions // self.num_heads
-        self.mha_first_linear_layer = nn.Linear(input_embedding_dimensions,3*input_embedding_dimensions)
+        self.is_causal = is_causal
+        
         self.register_buffer('mask', torch.tril(torch.ones(max_sequence_length,max_sequence_length).view(1, 1,max_sequence_length,max_sequence_length)))
         self.mha_final_linear_layer = nn.Linear(input_embedding_dimensions,input_embedding_dimensions)
     
-    def forward(self, positional_embeddings):
+    def forward(self,positional_embeddings, q,k,v):
 
         heads_output = []
         heads_att_weights = []
-        batch_size = positional_embeddings.size(0)
         #input splitting (Q,K,V)
-        
-        q,k,v = self.mha_first_linear_layer(positional_embeddings).split(input_embedding_dimensions,dim=-1)
-        q = self.split_heads(q,batch_size)
-        k = self.split_heads(k,batch_size)
-        v = self.split_heads(v,batch_size)
+        batch_size = positional_embeddings.size(0)
+        # q,k,v = self.mha_first_linear_layer(positional_embeddings).split(input_embedding_dimensions,dim=-1)
+        # q = self.split_heads(q,batch_size)
+        # k = self.split_heads(k,batch_size)
+        # v = self.split_heads(v,batch_size)
         #MHA
         score_matrix = q @ k.permute(0,1,3,2)
         score_matrix = score_matrix/(self.head_dim ** 0.5)
-        mask = self.mask == 0 #torch.tril(torch.ones(batch_size,1,score_matrix.size(2), score_matrix.size(3))) == 0
-        mask = mask[:,:,:score_matrix.size(2),:score_matrix.size(2)]
-        score_matrix = score_matrix.masked_fill(mask, float('-inf'))
+        if self.is_causal:
+            mask = self.mask == 0 #torch.tril(torch.ones(batch_size,1,score_matrix.size(2), score_matrix.size(3))) == 0
+            mask = mask[:,:,:score_matrix.size(2),:score_matrix.size(2)]
+            score_matrix = score_matrix.masked_fill(mask, float('-inf'))
+
         att_weights = torch.softmax(score_matrix,dim=-1)
         heads_att_weights.append(att_weights)
         output = att_weights @ v
@@ -64,9 +66,7 @@ class attention(torch.nn.Module):
         final_mha_output = self.mha_final_linear_layer(heads_output)
         return final_mha_output
     
-    def split_heads(self, x, batch_size):
-        x = x.view(batch_size, -1, self.num_heads, self.head_dim)
-        return x.permute(0, 2, 1, 3)
+
 
 
 class feedForward(nn.Module):
@@ -93,8 +93,8 @@ class transformer_layer(nn.Module):
         self.feedForward = feedForward()
         self.ff_norm_layer = nn.LayerNorm(input_embedding_dimensions) # this was ff_add_norm.size(-1) and i replaced with input_embedding_dimensions
     
-    def forward(self, positional_embeddings):
-        final_mha_output = self.attention(positional_embeddings)
+    def forward(self, positional_embeddings, q,k,v):
+        final_mha_output = self.attention(positional_embeddings, q,k,v)
         mha_add_norm = final_mha_output + positional_embeddings
         mha_norm_output = self.mha_norm_layer(mha_add_norm)
         ff_output = self.feedForward(mha_norm_output)
@@ -106,23 +106,92 @@ class transformer_layer(nn.Module):
 
 
 
+class encoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.attention = attention()
+        self.mha_norm_layer = nn.LayerNorm(input_embedding_dimensions) # this was mha_add_norm.size(-1) and i replaced with input_embedding_dimensions
+        self.feedForward = feedForward()
+        self.ff_norm_layer = nn.LayerNorm(input_embedding_dimensions) # this was ff_add_norm.size(-1) and i replaced with input_embedding_dimensions
+
+    def forward(self, positional_embeddings, q,k,v):
+        final_mha_output = self.attention(positional_embeddings, q,k,v)
+        mha_add_norm = final_mha_output + positional_embeddings
+        mha_norm_output = self.mha_norm_layer(mha_add_norm)
+        ff_output = self.feedForward(mha_norm_output)
+
+        ff_add_norm = ff_output + mha_norm_output
+        ff_norm_output = self.ff_norm_layer(ff_add_norm)
+        return ff_norm_output
+
+
+
+class decoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_attention = attention(is_causal=True)
+        self.mha_first_norm_layer = nn.LayerNorm(input_embedding_dimensions) # this was mha_add_norm.size(-1) and i replaced with input_embedding_dimensions
+        self.second_attention = attention(is_causal=False)
+        self.mha_second_norm_layer = nn.LayerNorm(input_embedding_dimensions) # this was ff_add_norm.size(-1) and i replaced with input_embedding_dimensions
+        self.feedForward = feedForward()
+        self.ff_norm_layer = nn.LayerNorm(input_embedding_dimensions) # this was ff_add_norm.size(-1) and i replaced with input_embedding_dimensions
+    
+    def forward(self, positional_embeddings, q,k,v):
+        first_attention_output = self.first_attention(positional_embeddings, q,k,v)
+        first_mha_add_norm = first_attention_output + positional_embeddings
+        first_mha_norm_output = self.mha_first_norm_layer(first_mha_add_norm)
+        second_attention_output = self.second_attention(positional_embeddings, q,k,v)
+        second_mha_add_norm = first_mha_norm_output + second_attention_output
+        second_mha_norm_output = self.mha_second_norm_layer(second_mha_add_norm)
+        ff_output = self.feedForward(second_mha_norm_output)
+
+        ff_add_norm = ff_output + second_mha_norm_output
+        ff_norm_output = self.ff_norm_layer(ff_add_norm)
+        return ff_norm_output
+
 
 
 class GPT(nn.Module):
     def __init__(self):
         super().__init__()
         self.num_heads = num_heads
-        self.positional_embeddings = positionalEmbeddings()
+        self.head_dim = input_embedding_dimensions // self.num_heads
+        self.enc_positional_embeddings = positionalEmbeddings()
+        self.dec_positional_embeddings = positionalEmbeddings()
+        self.mha_first_linear_layer = nn.Linear(input_embedding_dimensions,3*input_embedding_dimensions)
         self.drop    = torch.nn.Dropout(drop_rate)
-        self.transformer_layer = torch.nn.ModuleList([transformer_layer() for _ in range(num_layers)])
+        self.encoder = torch.nn.ModuleList([encoder() for _ in range(num_layers)])
+        self.decoder = torch.nn.ModuleList([decoder() for _ in range(num_layers)])
         self.final_linear_layer = nn.Linear(input_embedding_dimensions,vocab_size)
 
 
-    def forward(self, inputs):
-        positional_embeddings = self.positional_embeddings(inputs)
-        positional_embeddings = self.drop(positional_embeddings)
-        for transformer_layer in self.transformer_layer: positional_embeddings  = transformer_layer(positional_embeddings)
-        ff_norm_output = positional_embeddings
+    def forward(self, enc_inputs, dec_inputs):
+        batch_size = enc_inputs.size(0)
+        enc_positional_embeddings = self.enc_positional_embeddings(enc_inputs)
+        enc_positional_embeddings = self.drop(enc_positional_embeddings)
+        for encoder_layer in self.encoder:
+            enc_q, enc_k, enc_v = self.qkv(batch_size,enc_positional_embeddings)
+            enc_positional_embeddings  = encoder_layer(enc_positional_embeddings, enc_q, enc_k, enc_v)
+
+        dec_positional_embeddings = self.dec_positional_embeddings(dec_inputs)
+        dec_positional_embeddings = self.drop(dec_positional_embeddings)
+        final_enc_q, final_enc_k, _ = self.qkv(batch_size,enc_positional_embeddings)
+        for decoder_layer in self.decoder:
+            _,_, dec_v = self.qkv(batch_size,dec_positional_embeddings)
+            dec_positional_embeddings  = decoder_layer(dec_positional_embeddings, final_enc_q, final_enc_k, dec_v)    
+        ff_norm_output = dec_positional_embeddings
         final_linear_layer_output = self.final_linear_layer(ff_norm_output)
         final_transformer_output = final_linear_layer_output #torch.softmax(final_linear_layer_output, dim=-1)
         return final_transformer_output
+    
+    def split_heads(self, x, batch_size):
+        x = x.view(batch_size, -1, self.num_heads, self.head_dim)
+        return x.permute(0, 2, 1, 3)
+    
+    def qkv(self,batch_size,positional_embeddings):
+        q,k,v = self.mha_first_linear_layer(positional_embeddings).split(input_embedding_dimensions,dim=-1)
+        q = self.split_heads(q,batch_size)
+        k = self.split_heads(k,batch_size)
+        v = self.split_heads(v,batch_size)
+        return q,k,v
+

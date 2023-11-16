@@ -14,7 +14,7 @@ def evaluation(transformer_model,val_dl,loss_function, device):
         for val_idx, val_batch in enumerate(val_dl):
             val_tokens = val_batch['input'].to(device)
             val_labels = val_batch['label'].to(device)
-            val_output= transformer_model(val_tokens)
+            val_output= transformer_model(val_tokens, val_tokens)
             val_model_output = val_output.view(-1, val_output.size(-1))  # Reshape to [batch_size * seq_length, num_classes]
             val_true_labels = val_labels.view(-1)  # Reshape to [batch_size * seq_length]
             val_loss = loss_function(val_model_output, val_true_labels)

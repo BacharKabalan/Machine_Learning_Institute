@@ -69,7 +69,7 @@ for epoch in range(num_epochs):
         
         
         with torch.autocast(device_type='cuda', dtype=torch.float16):
-            output= transformer_model(tokens)
+            output= transformer_model(tokens, tokens)
             model_output = output.view(-1, output.size(-1))  # Reshape to [batch_size * seq_length, num_classes]
             true_labels = labels.view(-1)  # Reshape to [batch_size * seq_length]
             loss = loss_function(model_output, true_labels)
@@ -91,6 +91,7 @@ for epoch in range(num_epochs):
 
         if idx>0 and idx%5000==0: 
             checkpoint_path = os.path.join(checkpoint_dir, f"multi_head_with_pos_encod_weights_{epoch}_{idx}.pt")
+            val_acc, val_loss, bleu_metrics = bash_gpt_evaluation.evaluation(transformer_model,val_dl,loss_function, device)
             torch.save({
             'epoch': epoch,
             'model_state_dict': transformer_model.state_dict(),
@@ -100,7 +101,7 @@ for epoch in range(num_epochs):
             'val_acc': val_acc,
             'bleu_score': bleu_metrics['score']
         }, checkpoint_path)
-            val_acc, val_loss, bleu_metrics = bash_gpt_evaluation.evaluation(transformer_model,val_dl,loss_function, device)
+            
             print(f"train_loss: {loss:.4f}, val_loss: {val_loss:.4f}, val_acc: {val_acc:.4f}, bleu_score: {bleu_metrics['score']:4f}")
             
             
