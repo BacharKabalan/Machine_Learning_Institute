@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-vocab_size = 16000
+vocab_size = 40000
 input_embedding_dimensions = 512
 max_sequence_length = 1194
 ff_dimension = 2048

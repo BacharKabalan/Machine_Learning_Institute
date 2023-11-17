@@ -99,6 +99,6 @@ if __name__ == '__main__':
   # 'input': tensor([ 7, 15, 15,  3])
   # 'label': tensor([15, 15,  3,  1])
   # 'masks': tensor([ 1,  1,  1,  1])
-  ds = LangDataset()
+  ds = LangDataset(data_split = 0.8)
   print('len(ds)', len(ds))
   print('ds[362]', ds[362])

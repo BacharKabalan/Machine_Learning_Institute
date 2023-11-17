@@ -51,9 +51,9 @@ def inference(text, saved_model):
     # iterable_text[0,0] = next_token_id
     # print(iterable_text)
     break_count = 0
-    
+    max_translation_length = input_text.size(1)+10
     with torch.no_grad():
-        while (next_token_id != tk.PieceToId("[EOS]")) & (break_count < 20):
+        while (next_token_id != tk.PieceToId("[EOS]")) & (break_count < max_translation_length):
             iterable_tensor = torch.tensor(iterable_text)
             iterable_tensor = iterable_tensor.view(1,-1)
             iterable_tensor = iterable_tensor.to(device)

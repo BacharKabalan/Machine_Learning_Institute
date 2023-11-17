@@ -34,7 +34,7 @@ class LangTokenizer:
       input=path,
       model_type='bpe',
       model_prefix=self.prefix,
-      vocab_size=16000,
+      vocab_size=24000,
       pad_id=0,
       unk_id=1,
       bos_id=2,
@@ -60,8 +60,8 @@ if __name__ == '__main__':
   # print('tknz.vocab', tknz.vocab)
   # print('tknz.stoi', tknz.stoi)
   # print('tknz.itos', tknz.itos)
-  tknz = (LangTokenizer()).load()
-  # tknz.train('./eng_ita.tsv').load()
+  tknz = LangTokenizer()
+  tknz.train('./eng_ita.tsv').load()
   print("tknz.vocab_size()", tknz.vocab_size())
   print('tknz.sp.bos_id()', tknz.sp.bos_id())
   print('tknz.sp.pad_id()', tknz.sp.pad_id())

@@ -31,7 +31,7 @@ validation_split = 0.2
 tk = (tokenizer_bes.LangTokenizer()).load()
 ds = dataset_bes.LangDataset(train_split)
 val_ds = dataset_bes.LangDataset(validation_split)
-batch_size = 4
+batch_size = 64
 dl = torch.utils.data.DataLoader(ds, batch_size=batch_size, shuffle=True, collate_fn=ds.collate_fn)
 val_dl = torch.utils.data.DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=ds.collate_fn)
 
@@ -56,7 +56,7 @@ num_epochs = 1
 
 # with profiler.profile(record_shapes=True, use_cuda=True) as prof:
 
-user_prompt = 'I went to school on Friday.'
+user_prompt = 'I went to school on Friday. I played with my friends. I came back home in the afternoon.'
 
 for epoch in range(num_epochs):
     
@@ -85,7 +85,7 @@ for epoch in range(num_epochs):
 
             
 #         print(time.time()-start_time)
-        if idx % 1000 == 0:
+        if idx % 10 == 0:
             print(f"train_loss: {loss:.4f}")
             time_since_start = (time.time()-start_time)
             print(f'training time since start: {int(time_since_start/seconds_in_hour)} hours {int(time_since_start%seconds_in_hour/seconds_in_minute)} minutes')
@@ -109,7 +109,7 @@ for epoch in range(num_epochs):
             
             print('*'*150 + '\n')
             print(f'User prompt -> {user_prompt}' + '\n') 
-            print(f'Ba$H_GPT Story -> {bash_gpt_inference.inference(user_prompt,checkpoint_path)}' + '\n')
+            print(f'Ba$H_GPT Translator -> {bash_gpt_inference.inference(user_prompt,checkpoint_path)}' + '\n')
             print('*'*150 + '\n')
 
             
