@@ -42,9 +42,16 @@ class Dataset(torch.utils.data.Dataset):
 
 
 class LangDataset(torch.utils.data.Dataset):
-  def __init__(self):
+  def __init__(self, data_split):
     self.column_names = ['id_eng', 'eng', 'id_ita', 'ita']
     self.df = pandas.read_csv('./eng_ita.tsv', delimiter='\t', encoding='utf-8', on_bad_lines='skip', header=None, names=self.column_names)
+    if data_split>0.7:
+      train_index = int(data_split*len(self.df))
+      self.df = self.df[:train_index]
+    else:
+      validation_index = len(self.df) - int(len(self.df)*0.2)
+      self.df = self.df[validation_index:]
+
     self.tk  = tokenizer_bes.LangTokenizer()
     self.tk.load()
 

@@ -196,3 +196,4 @@ class GPT(nn.Module):
         v = self.split_heads(v,batch_size)
         return q,k,v
 
+

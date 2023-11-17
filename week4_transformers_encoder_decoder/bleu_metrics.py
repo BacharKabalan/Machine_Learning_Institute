@@ -6,7 +6,7 @@ import tokenizer_bes
 
 
 def bleu_evaluate(model_output, true_labels, batch_size):
-    tk = (tokenizer_bes.TinyTokenizer()).load()
+    tk = (tokenizer_bes.LangTokenizer()).load()
     sacrebleu = evaluate.load('sacrebleu')
     
     

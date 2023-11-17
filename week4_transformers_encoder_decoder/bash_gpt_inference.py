@@ -40,26 +40,32 @@ def inference(text, saved_model):
     tk.load('tiny_piece.model')
     
     tokenised_text = tk.EncodeAsIds(text)
-    iterable_text = tokenised_text
-    
+    input_text = torch.tensor(tokenised_text)
+    input_text = torch.LongTensor(input_text)
+    input_text = input_text.view(1,-1)
+    input_text = input_text.to(device)
     next_token_id = tk.PieceToId("[BOS]")
-    break_count = len(iterable_text)
+    iterable_text = torch.zeros(input_text.size(), dtype=torch.long)   
+    iterable_text = torch.LongTensor(iterable_text)
+    iterable_text[0,0] = next_token_id
+    break_count = 0
     
-    while (next_token_id != tk.PieceToId("[EOS]")) & (break_count <= max_sequence_length):
-        iterable_tensor = torch.tensor(iterable_text)
-        iterable_tensor = iterable_tensor.view(1,-1)
-        iterable_tensor = iterable_tensor.to(device)
-        probability_matrix = inference_model(iterable_tensor)
-        #print(probability_matrix.size())
-        probability_vector = probability_matrix[0, -1, :]
-        #print(probability_vector.size())
-        next_token_id = (torch.argmax(probability_vector))
-        #print(next_token_id)
-        iterable_text = iterable_text + [next_token_id.item()]
-        #print(tk.decode(iterable_text))
-        break_count += 1
+    with torch.no_grad():
+        while (next_token_id != tk.PieceToId("[EOS]")) & (break_count < input_text.size(1)-1):
+            iterable_tensor = iterable_text
+            iterable_tensor = iterable_tensor.view(1,-1)
+            iterable_tensor = iterable_tensor.to(device)
+            probability_matrix = inference_model(input_text,iterable_tensor)
+            probability_matrix = torch.softmax(probability_matrix, dim=-1)
+            probability_vector = torch.argmax(probability_matrix, dim=-1)
+            print(probability_vector)
+            # probability_vector = probability_matrix[0, -1, :]
+            next_token_id = probability_vector[0,break_count]
+            print(next_token_id)
+            iterable_text[0,break_count+1] = next_token_id.item()
+            break_count += 1
         
-    final_text = tk.decode(iterable_text)
+    final_text = tk.decode(iterable_text.tolist())
     return final_text
 
 if __name__ == '__main__':

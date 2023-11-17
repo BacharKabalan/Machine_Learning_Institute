@@ -26,10 +26,11 @@ import time
 
 seconds_in_hour = 3600
 seconds_in_minute = 60
-
+train_split = 0.8
+validation_split = 0.2
 tk = (tokenizer_bes.LangTokenizer()).load()
-ds = dataset_bes.LangDataset()
-val_ds = dataset_bes.LangDataset()
+ds = dataset_bes.LangDataset(train_split)
+val_ds = dataset_bes.LangDataset(validation_split)
 batch_size = 4
 dl = torch.utils.data.DataLoader(ds, batch_size=batch_size, shuffle=True, collate_fn=ds.collate_fn)
 val_dl = torch.utils.data.DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=ds.collate_fn)
@@ -55,7 +56,7 @@ num_epochs = 1
 
 # with profiler.profile(record_shapes=True, use_cuda=True) as prof:
 
-user_prompt = 'Lilly and'
+user_prompt = 'I went to school on Friday.'
 
 for epoch in range(num_epochs):
     
