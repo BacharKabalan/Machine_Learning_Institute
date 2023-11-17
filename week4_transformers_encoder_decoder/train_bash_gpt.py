@@ -91,7 +91,7 @@ for epoch in range(num_epochs):
             print(f'training time since start: {int(time_since_start/seconds_in_hour)} hours {int(time_since_start%seconds_in_hour/seconds_in_minute)} minutes')
 
 
-        if idx>0 and idx%5000==0: 
+        if idx>0 and idx%10==0: 
             checkpoint_path = os.path.join(checkpoint_dir, f"multi_head_with_pos_encod_weights_{epoch}_{idx}.pt")
             val_acc, val_loss, bleu_metrics = bash_gpt_evaluation.evaluation(transformer_model,val_dl,loss_function, device)
             torch.save({

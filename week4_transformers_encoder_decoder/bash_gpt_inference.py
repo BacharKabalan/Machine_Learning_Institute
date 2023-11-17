@@ -45,27 +45,31 @@ def inference(text, saved_model):
     input_text = input_text.view(1,-1)
     input_text = input_text.to(device)
     next_token_id = tk.PieceToId("[BOS]")
-    iterable_text = torch.zeros(input_text.size(), dtype=torch.long)   
-    iterable_text = torch.LongTensor(iterable_text)
-    iterable_text[0,0] = next_token_id
+    iterable_text = [next_token_id]
+    # iterable_text = torch.zeros(input_text.size(), dtype=torch.long)   
+    # iterable_text = torch.LongTensor(iterable_text)
+    # iterable_text[0,0] = next_token_id
+    # print(iterable_text)
     break_count = 0
     
     with torch.no_grad():
-        while (next_token_id != tk.PieceToId("[EOS]")) & (break_count < input_text.size(1)-1):
-            iterable_tensor = iterable_text
+        while (next_token_id != tk.PieceToId("[EOS]")) & (break_count < 20):
+            iterable_tensor = torch.tensor(iterable_text)
             iterable_tensor = iterable_tensor.view(1,-1)
             iterable_tensor = iterable_tensor.to(device)
             probability_matrix = inference_model(input_text,iterable_tensor)
             probability_matrix = torch.softmax(probability_matrix, dim=-1)
+
             probability_vector = torch.argmax(probability_matrix, dim=-1)
-            print(probability_vector)
+
             # probability_vector = probability_matrix[0, -1, :]
-            next_token_id = probability_vector[0,break_count]
-            print(next_token_id)
-            iterable_text[0,break_count+1] = next_token_id.item()
+            next_token_id = probability_vector[0,-1]
+
+            iterable_text += [next_token_id.item()]
+
             break_count += 1
         
-    final_text = tk.decode(iterable_text.tolist())
+    final_text = tk.decode(iterable_text)
     return final_text
 
 if __name__ == '__main__':
