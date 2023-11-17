@@ -57,6 +57,7 @@ class attention(torch.nn.Module):
 
         att_weights = torch.softmax(score_matrix,dim=-1)
         heads_att_weights.append(att_weights)
+
         output = att_weights @ v
         output = output.permute(0, 2, 1, 3).contiguous().view(batch_size, -1, self.head_dim * self.num_heads)
 

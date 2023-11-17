@@ -1,10 +1,27 @@
 import sentencepiece as spm
 
 
-class TinyTokenizer:
+class Tokenizer:
+  def __init__(self):
+    f = open('./names.txt', 'r')
+    names = f.read().splitlines()
+    self.vocab = ['<pad>', '<eos>', '<sos>'] + sorted(set(''.join(names)))
+    self.stoi = {c:i for i, c in enumerate(self.vocab)}
+    self.itos = {i:c for i, c in enumerate(self.vocab)}
+    self.vocab_size = len(self.vocab)
+    f.close()
+
+  def encode(self, name):
+    return [self.stoi[c] for c in name]
+
+  def decode(self, tokens):
+    return ''.join([self.itos[t] for t in tokens if self.itos[t] not in ('<sos>', '<eos>', '<pad>')])
+
+
+class LangTokenizer:
   def __init__(self, prefix='tiny_piece'):
     self.prefix = prefix
-    self.sp = spm.SentencePieceProcessor()
+    self.sp = spm.SentencePieceProcessor(f"./{self.prefix}.model")
 
   def encode(self, txt):
     return self.sp.encode_as_ids(txt)
@@ -39,9 +56,12 @@ class TinyTokenizer:
 
 
 if __name__ == '__main__':
-  tknz = TinyTokenizer()
-  tknz.train('./tiny_stories_all.txt').load()
-  # tknz.load()
+  # tknz = Tokenizer()
+  # print('tknz.vocab', tknz.vocab)
+  # print('tknz.stoi', tknz.stoi)
+  # print('tknz.itos', tknz.itos)
+  tknz = (LangTokenizer()).load()
+  # tknz.train('./eng_ita.tsv').load()
   print("tknz.vocab_size()", tknz.vocab_size())
   print('tknz.sp.bos_id()', tknz.sp.bos_id())
   print('tknz.sp.pad_id()', tknz.sp.pad_id())

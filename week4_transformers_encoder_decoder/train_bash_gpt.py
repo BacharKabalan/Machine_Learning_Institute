@@ -1,6 +1,7 @@
 #project specific libraries
-import dataset_bes_train
-import dataset_bes_val
+# import dataset_bes_train
+# import dataset_bes_val
+import dataset_bes
 import tokenizer_bes
 import bash_gpt_evaluation
 import parameters_per_layer
@@ -26,10 +27,10 @@ import time
 seconds_in_hour = 3600
 seconds_in_minute = 60
 
-tk = (tokenizer_bes.TinyTokenizer()).load()
-ds = dataset_bes_train.TinyDataset()
-val_ds = dataset_bes_val.TinyDataset()
-batch_size = 7
+tk = (tokenizer_bes.LangTokenizer()).load()
+ds = dataset_bes.LangDataset()
+val_ds = dataset_bes.LangDataset()
+batch_size = 4
 dl = torch.utils.data.DataLoader(ds, batch_size=batch_size, shuffle=True, collate_fn=ds.collate_fn)
 val_dl = torch.utils.data.DataLoader(val_ds, batch_size=batch_size, shuffle=True, collate_fn=ds.collate_fn)
 
@@ -62,14 +63,14 @@ for epoch in range(num_epochs):
     start_time = time.time()
     for idx, batch in enumerate(dl):
 #         start_time = time.time()
-        tokens = batch['input'].to(device)
+        enc_tokens = batch['contx'].to(device)
+        dec_tokens = batch['input'].to(device)
         labels = batch['label'].to(device)
         optimizer.zero_grad()
         
         
-        
         with torch.autocast(device_type='cuda', dtype=torch.float16):
-            output= transformer_model(tokens, tokens)
+            output= transformer_model(enc_tokens, dec_tokens)
             model_output = output.view(-1, output.size(-1))  # Reshape to [batch_size * seq_length, num_classes]
             true_labels = labels.view(-1)  # Reshape to [batch_size * seq_length]
             loss = loss_function(model_output, true_labels)
