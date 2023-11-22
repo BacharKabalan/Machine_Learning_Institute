@@ -50,7 +50,10 @@ class TrainDataset(Dataset):
   def max_seq_len(self):
     return max([len(elm["input_ids"]) for elm in self.ds])
   
-
+  def special_tokens(self, tokenizer):
+    num_added_toks = ["ALTER","DELETE", "INTO","DATABASE","DROP"]
+    tokenizer.add_tokens(num_added_toks)
+    return tokenizer
 
 # ds = TrainDataset()
 # dl = torch.utils.data.DataLoader(ds, batch_size=4, shuffle=True)

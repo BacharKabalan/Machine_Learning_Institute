@@ -15,8 +15,10 @@ class TrainDataset(Dataset):
     self.tokenizer = t.AutoTokenizer.from_pretrained("NousResearch/Llama-2-7b-hf")
     self.tokenizer.pad_token_id = 0
     self.tokenizer.padding_side = "right"
+    self.tokenizer = self.special_tokens(self.tokenizer) #add SQL special tokens
+    
     self.ds = d.load_dataset("b-mc2/sql-create-context")
-    self.ds = self.ds["train"]#.select([i for i in range(20)])
+    self.ds = self.ds["train"].select([i for i in range(20)])
     self.ds = self.ds.map(self.prompt, remove_columns=["question", "context", "answer"], load_from_cache_file=False, num_proc=8)
     self.ds = self.ds.map(self.tokenize, remove_columns=["prompt"], load_from_cache_file=False, num_proc=8)
 
@@ -49,6 +51,38 @@ class TrainDataset(Dataset):
 
   def max_seq_len(self):
     return max([len(elm["input_ids"]) for elm in self.ds])
+
+  def special_tokens(self, tokenizer):
+   
+    # original_len: int = len(tokenizer)
+    # num_added_toks: dict = {}
+    # num_added_toks['alter_token'] = "ALTER"
+    # num_added_toks['delete_token'] = "DELETE"
+    # num_added_toks['into_token'] = "INTO"
+    # num_added_toks['database_token'] = "DATABASE"
+    # num_added_toks['drop_token'] = "DROP"
+    # num_added_toks['UPDATE_token'] = "UPDATE"
+
+    # num_added_toks['ALTER_DATABASE_token'] = "ALTER DATABASE",
+    # num_added_toks['CREATE_TABLE_token'] = "CREATE TABLE",
+    # num_added_toks['ALTER_TABLE_token'] = "ALTER TABLE",
+    
+    # num_added_toks['CREATE_INDEX_token'] = "CREATE INDEX",
+    # num_added_toks['DROP_INDEX_token'] = "DROP INDEX",
+    
+    # num_new_tokens: int = tokenizer.add_special_tokens(num_added_toks)
+    # err_msg = f"Error, not equal: {len(tokenizer)=}, {original_len + num_new_tokens=}"
+    # assert len(tokenizer) == original_len + num_new_tokens, err_ms
+    # assert tokenizer.SELECT_token == "SELECT"
+    # return tokenizer
+    # new_tokens = ["SELECT","UPDATE","DELETE", "INSERT", "INTO","CREATE","DATABASE","ALTER","TABLE","DROP","INDEX"]
+    # new_tokens = set(new_tokens) - set(tokenizer.vocab.keys())
+    # print(new_tokens)
+    # num_added_toks = [['alter_token',"ALTER"],['delete_token',"DELETE"],['into_token',"INTO"],['database_token',"DATABASE"],['drop_token',"DROP"]]
+    num_added_toks = ["ALTER","DELETE", "INTO","DATABASE","DROP"]
+    tokenizer.add_tokens(num_added_toks)
+    # assert tokenizer.alter_token == "ALTER"
+    return tokenizer
   
 
 
