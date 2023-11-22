@@ -18,7 +18,7 @@ class TrainDataset(Dataset):
     self.tokenizer = self.special_tokens(self.tokenizer) #add SQL special tokens
     
     self.ds = d.load_dataset("b-mc2/sql-create-context")
-    self.ds = self.ds["train"].select([i for i in range(20)])
+    self.ds = self.ds["train"].select([i for i in range(2000)])
     self.ds = self.ds.map(self.prompt, remove_columns=["question", "context", "answer"], load_from_cache_file=False, num_proc=8)
     self.ds = self.ds.map(self.tokenize, remove_columns=["prompt"], load_from_cache_file=False, num_proc=8)
 
@@ -79,7 +79,7 @@ class TrainDataset(Dataset):
     # new_tokens = set(new_tokens) - set(tokenizer.vocab.keys())
     # print(new_tokens)
     # num_added_toks = [['alter_token',"ALTER"],['delete_token',"DELETE"],['into_token',"INTO"],['database_token',"DATABASE"],['drop_token',"DROP"]]
-    num_added_toks = ["ALTER","DELETE", "INTO","DATABASE","DROP"]
+    num_added_toks = ["ALTER","DELETE", "INTO","DATABASE","DROP","(*)"]
     tokenizer.add_tokens(num_added_toks)
     # assert tokenizer.alter_token == "ALTER"
     return tokenizer

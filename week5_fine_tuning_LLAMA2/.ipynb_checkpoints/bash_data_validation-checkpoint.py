@@ -51,7 +51,7 @@ class TrainDataset(Dataset):
     return max([len(elm["input_ids"]) for elm in self.ds])
   
   def special_tokens(self, tokenizer):
-    num_added_toks = ["ALTER","DELETE", "INTO","DATABASE","DROP"]
+    num_added_toks = ["ALTER","DELETE", "INTO","DATABASE","DROP","(*)"]
     tokenizer.add_tokens(num_added_toks)
     return tokenizer
 

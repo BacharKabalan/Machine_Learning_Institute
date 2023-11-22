@@ -50,10 +50,7 @@ def compute_metrics(p):
     # Extract predictions and labels from EvalPrediction
     predictions = torch.tensor(p.predictions)
     label_ids = p.label_ids
-    print('************************')
-    print(predictions.shape)
-    print(label_ids.shape)
-    print(11111111111111111111)
+
     
     # Create a dictionary similar to what the collator expects
     inputs = {"input_ids": predictions}
@@ -65,7 +62,7 @@ def compute_metrics(p):
     pred_max_indices = torch.argmax(pred_softmax_tensor, dim=2)
     # Decode the model outputs to get the generated text
     generated_text = ds.tokenizer.decode(pred_max_indices[0], skip_special_tokens=True)
-    input_text = ds.tokenizer.decode(torch.tensor(label_ids), skip_special_tokens=True)
+    input_text = ds.tokenizer.decode(torch.tensor(label_ids[0]), skip_special_tokens=True)
     # Print the generated text for each batch during evaluation
     print(generated_text)
     print('******************')
