@@ -1,0 +1,7 @@
+  0%|                                                                                                                                                                                      | 0/3 [00:00<?, ?it/s]You're using a LlamaTokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
+/home/bash1989/anaconda3/envs/ml/lib/python3.9/site-packages/bitsandbytes/autograd/_functions.py:322: UserWarning: MatMul8bitLt: inputs will be cast from torch.float32 to float16 during quantization
+  warnings.warn(f"MatMul8bitLt: inputs will be cast from {A.dtype} to float16 during quantization")
+
+
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [03:39<00:00, 73.16s/it]
+{'train_runtime': 226.8205, 'train_samples_per_second': 0.044, 'train_steps_per_second': 0.013, 'train_loss': 10.037038167317709, 'epoch': 1.0}
