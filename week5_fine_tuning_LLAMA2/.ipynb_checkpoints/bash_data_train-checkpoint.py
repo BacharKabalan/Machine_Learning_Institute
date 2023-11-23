@@ -11,14 +11,17 @@ TEMPLATE_YES_INPUT = "Below is a question that describes a task paired with furt
 TEMPLATE_NOT_INPUT = "Below is a question that describes a task. Write a response that appropriately completes the request.\n\n### question:\n{question}\n\n### Response:\n"
 
 class TrainDataset(Dataset):
-  def __init__(self):
+  def __init__(self,train_split):
     self.tokenizer = t.AutoTokenizer.from_pretrained("NousResearch/Llama-2-7b-hf")
     self.tokenizer.pad_token_id = 0
     self.tokenizer.padding_side = "right"
-    self.tokenizer = self.special_tokens(self.tokenizer) #add SQL special tokens
     
+    self.tokenizer = self.special_tokens(self.tokenizer) #add SQL special tokens
     self.ds = d.load_dataset("b-mc2/sql-create-context")
-    self.ds = self.ds["train"]#.select([i for i in range(100)])
+    entire_ds = self.ds["train"]#.select([i for i in range(100)])
+    dataset_len = len(entire_ds)
+    dataset_len_train = int(train_split * dataset_len)
+    self.ds = self.ds["train"].select([i for i in range(dataset_len_train)])
     self.ds = self.ds.map(self.prompt, remove_columns=["question", "context", "answer"], load_from_cache_file=False, num_proc=8)
     self.ds = self.ds.map(self.tokenize, remove_columns=["prompt"], load_from_cache_file=False, num_proc=8)
 
@@ -37,14 +40,15 @@ class TrainDataset(Dataset):
 
   def tokenize(self, elm):
     # res = self.tokenizer(elm["prompt"])
-    # res["input_ids"].append(self.tokenizer.eos_token_id)
+    
     # res["attention_mask"].append(1)
     # res["labels"] = res["input_ids"].copy()
     res = self.tokenizer(elm["prompt"])
-    
+    res["input_ids"].append(self.tokenizer.eos_token_id)
+    res["attention_mask"].append(1)
     res["labels"] = res["input_ids"].copy()
-    res["labels"] = res["labels"][1:]
-    res["labels"].append(self.tokenizer.eos_token_id)
+    # res["labels"] = res["labels"][1:]
+    # res["labels"].append(self.tokenizer.eos_token_id)
     # res["input_ids"].append(self.tokenizer.bos_token_id)
     # res["attention_mask"].append(1)
     return res

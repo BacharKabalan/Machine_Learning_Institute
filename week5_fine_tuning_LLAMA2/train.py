@@ -4,16 +4,19 @@ import bash_data_train
 import bash_data_validation
 import os
 import torch
+import random
 
+train_split = 0.9999
+val_split = 1-train_split
 is_ddp = int(os.environ.get("WORLD_SIZE", 1)) != 1
 m = model.get_model()
-ds = bash_data_train.TrainDataset()
+ds = bash_data_train.TrainDataset(train_split)
 collator = transformers.DataCollatorForSeq2Seq(ds.tokenizer, pad_to_multiple_of=1, return_tensors="pt", padding=True)
 
 #resize embedding layer to take into account the added tokens
 m.resize_token_embeddings(len(ds.tokenizer))
 
-validation_ds = bash_data_validation.TrainDataset()
+validation_ds = bash_data_validation.TrainDataset(val_split)
 # import torch
 # import peft
 # adapters_weights = torch.load("./output/checkpoint-800/adapter_model.bin")
@@ -28,7 +31,7 @@ trainer = transformers.Trainer(
   tokenizer = ds.tokenizer,
   args=transformers.TrainingArguments(
     per_device_train_batch_size=16,
-    per_device_eval_batch_size=1,
+    per_device_eval_batch_size=16,
     num_train_epochs=1,
     learning_rate=3e-4,
     fp16=True,
@@ -36,7 +39,7 @@ trainer = transformers.Trainer(
     optim="adamw_torch",
     evaluation_strategy="steps",
     save_strategy="steps",
-    eval_steps=1,
+    eval_steps=20,
     save_steps=500,
     output_dir="./output",
     save_total_limit=10,
@@ -69,8 +72,7 @@ def compute_metrics(p):
     pred_max_indices = torch.argmax(pred_softmax_tensor, dim=2)
     pattern = '### Response:'
     # Decode the model outputs to get the generated text
-    for record in range(pred_max_indices.size(0)):
-        
+    for record in random.sample(range(pred_max_indices.size(0)),2):
         generated_text = ds.tokenizer.decode(pred_max_indices[record], skip_special_tokens=True)
         input_text = ds.tokenizer.decode(label_ids[record], skip_special_tokens=True)
         # Print the generated text for each batch during evaluation
