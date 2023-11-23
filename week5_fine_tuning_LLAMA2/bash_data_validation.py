@@ -51,8 +51,25 @@ class TrainDataset(Dataset):
     return max([len(elm["input_ids"]) for elm in self.ds])
   
   def special_tokens(self, tokenizer):
-    num_added_toks = ["ALTER","DELETE", "INTO","DATABASE","DROP","(*)"]
-    tokenizer.add_tokens(num_added_toks)
+    sql_keywords_uppercase = ["SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "INSERT", "UPDATE", "DELETE",
+    "CREATE", "ALTER", "DROP", "TABLE", "INDEX", "VIEW", "DATABASE", "DISTINCT",
+    "ORDER BY", "GROUP BY", "HAVING", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN",
+    "OUTER JOIN", "JOIN", "ON", "AS", "CASE", "WHEN", "THEN", "ELSE", "END",
+    "BETWEEN", "IN", "LIKE", "IS NULL", "IS NOT NULL", "AS", "ASC", "DESC",
+    "UNION", "INTERSECT", "EXCEPT", "ALL", "ANY", "SOME", "TOP", "LIMIT", "OFFSET",
+    "FETCH", "FIRST", "NEXT", "ROWS", "ONLY", "SET", "VALUES", "NULL", "TRUE", "FALSE","INTEGER", "CHAR", "VARCHAR", "TEXT", "BOOLEAN", "DATE", "TIME", "TIMESTAMP",
+    "NUMERIC", "DECIMAL", "REAL", "FLOAT", "DOUBLE", "PRECISION", "BLOB", "CLOB"] 
+    sql_keywords_lowercase = [keyword.lower() for keyword in sql_keywords_uppercase]
+    sql_special_characeters =  [
+    "*", "+", "-", "/", "=", ">", "<", "(", ")", "[", "]", "{", "}", ",", ".", ";", ":",
+    "*", "(", ")", "[", "]", "{", "}", ".*", "(*)", "+", "-", "/", "=", ">", "<", "<=",
+    "!=", "<>", "(", ")", "[", "]", "{", "}", ",", ".", ";", ":", "::", "::=", "||",
+    "&&", "!>", "<!", "<=>", "<>", "<|", "|>", ":=", "=>", "->", "--", "/*", "*/", "//"
+    ]
+    num_added_toks = sql_keywords_uppercase + sql_keywords_lowercase
+    num_added_toks.extend(sql_special_characeters)
+    num_added_toks = set(num_added_toks) - set(tokenizer.vocab.keys())
+    tokenizer.add_tokens(list(num_added_toks))
     return tokenizer
 
 # ds = TrainDataset()
