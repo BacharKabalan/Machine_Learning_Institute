@@ -44,9 +44,11 @@ class TrainDataset(Dataset):
     # res["attention_mask"].append(1)
     # res["labels"] = res["input_ids"].copy()
     res = self.tokenizer(elm["prompt"])
-    res["input_ids"].append(self.tokenizer.eos_token_id)
-    res["attention_mask"].append(1)
+    # res["input_ids"].append(self.tokenizer.eos_token_id)
+    # res["attention_mask"].append(1)
     res["labels"] = res["input_ids"].copy()
+    res["labels"] = res["labels"][1:]
+    res["labels"].append(self.tokenizer.eos_token_id)
     # res["labels"] = res["labels"][1:]
     # res["labels"].append(self.tokenizer.eos_token_id)
     # res["input_ids"].append(self.tokenizer.bos_token_id)

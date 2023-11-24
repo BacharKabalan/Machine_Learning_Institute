@@ -5,6 +5,7 @@ import bash_data_validation
 import os
 import torch
 import random
+import evaluate
 
 train_split = 0.9999
 val_split = 1-train_split
@@ -40,7 +41,7 @@ trainer = transformers.Trainer(
     evaluation_strategy="steps",
     save_strategy="steps",
     eval_steps=20,
-    save_steps=500,
+    save_steps=100,
     output_dir="./output",
     save_total_limit=10,
     ddp_find_unused_parameters=False if is_ddp else None,
@@ -57,9 +58,8 @@ def compute_metrics(p):
     predictions = torch.tensor(p.predictions)
     label_ids = p.label_ids
     label_ids = torch.tensor(label_ids)
-    label_ids = torch.where(label_ids < 0, torch.tensor(0), label_ids)
+    label_ids = torch.where(label_ids < 0, torch.tensor(ds.tokenizer.eos_token_id), label_ids)
 
-    
 
     
     # Create a dictionary similar to what the collator expects
@@ -70,24 +70,47 @@ def compute_metrics(p):
     pred_softmax_tensor = torch.nn.functional.softmax(predictions, dim=2)
     # Find the index of the maximum value along the last dimension
     pred_max_indices = torch.argmax(pred_softmax_tensor, dim=2)
+    #produce eval metrics
+    precision = evaluate.load('precision')
+    recall = evaluate.load('recall')
+    f1 = evaluate.load('f1')
+    accuracy = evaluate.load('accuracy')
+    
+
+    
     pattern = '### Response:'
     # Decode the model outputs to get the generated text
     for record in random.sample(range(pred_max_indices.size(0)),2):
-        generated_text = ds.tokenizer.decode(pred_max_indices[record], skip_special_tokens=True)
-        input_text = ds.tokenizer.decode(label_ids[record], skip_special_tokens=True)
+        generated_text = ds.tokenizer.decode(pred_max_indices[record], skip_special_tokens=False)
+        input_text = ds.tokenizer.decode(label_ids[record], skip_special_tokens=False)
         # Print the generated text for each batch during evaluation
+        # print('\n\n')
+        # print('input ids \n')
+        # print(pred_max_indices[record])
+        # print('\n label ids \n')
+        # print(label_ids[record])
         
         index_of_pattern_gen = generated_text.find(pattern)
         # print('Generated text: \n')
         print('\n\n')
-        print(generated_text[index_of_pattern_gen:])
         print('******************'*10)
+        print('Generated text:\n')
+        print(generated_text[index_of_pattern_gen:])
+        
         index_of_pattern_input = input_text.find(pattern)
-        # print('Input text: \n')
+        print('Input text: \n')
         print(input_text[index_of_pattern_input:])
         print('\n\n')
-    # Return the generated text as the metric
-    return {}#{"generated_text": generated_text}
+        precision.add_batch(predictions=pred_max_indices[record], references=label_ids[record])
+        recall.add_batch(predictions=pred_max_indices[record], references=label_ids[record])
+        f1.add_batch(predictions=pred_max_indices[record], references=label_ids[record])
+        accuracy.add_batch(predictions=pred_max_indices[record], references=label_ids[record])
+
+    precision = precision.compute(average = 'weighted')
+    recall = recall.compute(average = 'weighted')
+    f1 = f1.compute(average = 'weighted')
+    accuracy = accuracy.compute()
+    return {"precision": precision, "recall": recall, "f1": f1, "accuracy": accuracy}#{"generated_text": generated_text}
 
 # Override compute_metrics in the trainer
 trainer.compute_metrics = compute_metrics
