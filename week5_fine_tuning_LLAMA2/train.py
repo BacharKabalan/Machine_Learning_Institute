@@ -7,7 +7,7 @@ import torch
 import random
 import evaluate
 
-train_split = 0.9999
+train_split = 0.9996
 val_split = 1-train_split
 is_ddp = int(os.environ.get("WORLD_SIZE", 1)) != 1
 m = model.get_model()
@@ -80,7 +80,7 @@ def compute_metrics(p):
     
     pattern = '### Response:'
     # Decode the model outputs to get the generated text
-    for record in random.sample(range(pred_max_indices.size(0)),2):
+    for record in random.sample(range(pred_max_indices.size(0)),20):
         generated_text = ds.tokenizer.decode(pred_max_indices[record], skip_special_tokens=False)
         input_text = ds.tokenizer.decode(label_ids[record], skip_special_tokens=False)
         # Print the generated text for each batch during evaluation

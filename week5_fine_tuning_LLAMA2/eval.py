@@ -5,14 +5,16 @@ import peft
 import bash_data_train
 import time
 #%%
-ds = bash_data_train.TrainDataset()
+train_split = 0.9999
+val_split = 1-train_split
+ds = bash_data_train.TrainDataset(train_split)
 tokenizer = ds.tokenizer
 # tokenizer = t.AutoTokenizer.from_pretrained("NousResearch/Llama-2-7b-hf")
 base_model = t.AutoModelForCausalLM.from_pretrained("NousResearch/Llama-2-7b-hf", load_in_8bit=True, torch_dtype=torch.float16)
 print(len(tokenizer))
 # tokenizer.pad_token_id = 0
 #%%
-checkpoint_path = "./output/checkpoint-4500"
+checkpoint_path = "./output/checkpoint-100"
 config = peft.PeftConfig.from_pretrained(checkpoint_path)
 model = peft.PeftModel.from_pretrained(base_model, checkpoint_path)
 # peft.set_peft_model_state_dict(model,"./output/checkpoint-4900/adapter_config.json")

@@ -20,7 +20,7 @@ def get_model():
   #prepare the model for K-bit quantization to reduce memory requirements and to make computational operations more efficeint
   m = peft.prepare_model_for_kbit_training(m)
   #define LoRA-specific parameters
-  config = peft.LoraConfig(r=8, lora_alpha=16, target_modules=["q_proj", "v_proj"], lora_dropout=0.005, bias="none", task_type="CAUSAL_LM")
+  config = peft.LoraConfig(r=8, lora_alpha=16, target_modules=["q_proj", "v_proj"], lora_dropout=0.01, bias="none", task_type="CAUSAL_LM")
   #wrap the base model to get a trainable PeftModel
   peft_model = peft.get_peft_model(m, config)
   return peft_model
