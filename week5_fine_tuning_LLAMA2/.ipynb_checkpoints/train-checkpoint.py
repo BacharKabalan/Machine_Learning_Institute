@@ -7,7 +7,8 @@ import torch
 import random
 import evaluate
 
-train_split = 0.9996
+
+train_split = 0.999
 val_split = 1-train_split
 is_ddp = int(os.environ.get("WORLD_SIZE", 1)) != 1
 m = model.get_model()
@@ -33,21 +34,20 @@ trainer = transformers.Trainer(
   args=transformers.TrainingArguments(
     per_device_train_batch_size=16,
     per_device_eval_batch_size=16,
-    num_train_epochs=1,
+    num_train_epochs=3,
     learning_rate=3e-4,
     fp16=True,
     logging_steps=200,
     optim="adamw_torch",
     evaluation_strategy="steps",
     save_strategy="steps",
-    eval_steps=20,
+    eval_steps=50,
     save_steps=100,
     output_dir="./output",
-    save_total_limit=10,
+    save_total_limit=5,
     ddp_find_unused_parameters=False if is_ddp else None,
   ),
 )
-
 
 def compute_metrics(p):
     #predictions is a numpy array with size (num_training_examples, max_sequence_length, vocab_size)
@@ -75,12 +75,14 @@ def compute_metrics(p):
     recall = evaluate.load('recall')
     f1 = evaluate.load('f1')
     accuracy = evaluate.load('accuracy')
+    sacrebleu = evaluate.load('sacrebleu')
+    rouge = evaluate.load('rouge')
     
 
     
     pattern = '### Response:'
     # Decode the model outputs to get the generated text
-    for record in random.sample(range(pred_max_indices.size(0)),20):
+    for record in range(pred_max_indices.size(0)):#random.sample(range(pred_max_indices.size(0)),20):
         generated_text = ds.tokenizer.decode(pred_max_indices[record], skip_special_tokens=False)
         input_text = ds.tokenizer.decode(label_ids[record], skip_special_tokens=False)
         # Print the generated text for each batch during evaluation
@@ -90,14 +92,14 @@ def compute_metrics(p):
         # print('\n label ids \n')
         # print(label_ids[record])
         
-        index_of_pattern_gen = generated_text.find(pattern)
-        # print('Generated text: \n')
+        index_of_pattern_gen = 0#generated_text.find(pattern)
+        print('Generated text: \n')
         print('\n\n')
         print('******************'*10)
         print('Generated text:\n')
         print(generated_text[index_of_pattern_gen:])
         
-        index_of_pattern_input = input_text.find(pattern)
+        index_of_pattern_input = 0#input_text.find(pattern)
         print('Input text: \n')
         print(input_text[index_of_pattern_input:])
         print('\n\n')
@@ -105,16 +107,18 @@ def compute_metrics(p):
         recall.add_batch(predictions=pred_max_indices[record], references=label_ids[record])
         f1.add_batch(predictions=pred_max_indices[record], references=label_ids[record])
         accuracy.add_batch(predictions=pred_max_indices[record], references=label_ids[record])
-
+        sacrebleu.add_batch(predictions=[ds.tokenizer.decode(pred_max_indices[record].tolist())], references=[[ds.tokenizer.decode(label_ids[record].tolist())]])
+        rouge.add_batch(predictions=[ds.tokenizer.decode(pred_max_indices[record].tolist())], references=[[ds.tokenizer.decode(label_ids[record].tolist())]])
     precision = precision.compute(average = 'weighted')
     recall = recall.compute(average = 'weighted')
     f1 = f1.compute(average = 'weighted')
     accuracy = accuracy.compute()
-    return {"precision": precision, "recall": recall, "f1": f1, "accuracy": accuracy}#{"generated_text": generated_text}
+    sacrebleu = sacrebleu.compute()
+    rouge = rouge.compute()
+    return {"precision": precision, "recall": recall, "f1": f1, "accuracy": accuracy, "sacre_bleu":sacrebleu, "rouge":rouge}#{"generated_text": generated_text}
 
 # Override compute_metrics in the trainer
 trainer.compute_metrics = compute_metrics
-
 m.config.use_cache = False
 trainer.train()
 # trainer.evaluate()

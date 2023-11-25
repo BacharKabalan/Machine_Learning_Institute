@@ -13,7 +13,8 @@ TEMPLATE_NOT_INPUT = "Below is a question that describes a task. Write a respons
 class TrainDataset(Dataset):
   def __init__(self, val_split):
     self.tokenizer = t.AutoTokenizer.from_pretrained("NousResearch/Llama-2-7b-hf")
-    self.tokenizer.pad_token_id = 0
+    # self.tokenizer.pad_token_id = 0
+    self.tokenizer.pad_token = self.tokenizer.eos_token
     self.tokenizer.padding_side = "right"
     self.tokenizer = self.sql_tokens(self.tokenizer) #add SQL special tokens
     self.ds = d.load_dataset("b-mc2/sql-create-context")
@@ -44,11 +45,11 @@ class TrainDataset(Dataset):
     # res["attention_mask"].append(1)
     # res["labels"] = res["input_ids"].copy()
     res = self.tokenizer(elm["prompt"])
-    # res["input_ids"].append(self.tokenizer.eos_token_id)
-    # res["attention_mask"].append(1)
+    res["input_ids"].append(self.tokenizer.eos_token_id)
+    res["attention_mask"].append(1)
     res["labels"] = res["input_ids"].copy()
-    res["labels"] = res["labels"][1:]
-    res["labels"].append(self.tokenizer.eos_token_id)
+    # res["labels"] = res["labels"][1:]
+    # res["labels"].append(self.tokenizer.eos_token_id)
     # res["input_ids"].append(self.tokenizer.bos_token_id)
     # res["attention_mask"].append(1)
     return res

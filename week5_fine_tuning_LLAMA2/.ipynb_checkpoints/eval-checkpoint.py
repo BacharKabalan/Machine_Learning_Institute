@@ -14,7 +14,7 @@ base_model = t.AutoModelForCausalLM.from_pretrained("NousResearch/Llama-2-7b-hf"
 print(len(tokenizer))
 # tokenizer.pad_token_id = 0
 #%%
-checkpoint_path = "./output/checkpoint-100"
+checkpoint_path = "./output/checkpoint-4900"
 config = peft.PeftConfig.from_pretrained(checkpoint_path)
 model = peft.PeftModel.from_pretrained(base_model, checkpoint_path)
 # peft.set_peft_model_state_dict(model,"./output/checkpoint-4900/adapter_config.json")
@@ -24,8 +24,8 @@ model.resize_token_embeddings(len(tokenizer))
 
 ########### ADD Template in a file
 TEMPLATE_YES_INPUT = "Below is a question that describes a task paired with further context. Write a response that appropriately completes the request.\n\n### question:\n{question}\n\n### context:\n{context}\n\n### Response:\n"
-QUESTION = "How many heads of the departments are older than 56 ?"
-CONTEXT = "CREATE TABLE head (age INTEGER)"
+QUESTION = "How many teachers are younger than 40 ?"
+CONTEXT = "CREATE TABLE teachers (age INTEGER)"
 prompt = TEMPLATE_YES_INPUT.format(question=QUESTION, context=CONTEXT)
 #%%
 
