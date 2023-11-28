@@ -10,4 +10,4 @@ HOST="$3"
 PORT="$4"
 scp -i "$PRIVATE_KEY" -P "$PORT" /home/bash1989/.ssh/id_ed25519.pub "$USERNAME"@"$HOST":~/.ssh/
 scp -i "$PRIVATE_KEY" -P "$PORT" /home/bash1989/.ssh/id_ed25519 "$USERNAME"@"$HOST":~/.ssh/
-scp -i "$PRIVATE_KEY" -P "$PORT" ~/founders_and_coders/founders_and_coders/week5_fine_tuning_LLAMA2/server_setup_script.sh "$USERNAME"@"$HOST":/workspace/
+scp -i "$PRIVATE_KEY" -P "$PORT" ~/founders_and_coders/founders_and_coders/setup/server_setup_script.sh "$USERNAME"@"$HOST":/workspace/
