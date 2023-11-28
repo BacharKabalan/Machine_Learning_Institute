@@ -1,0 +1,1 @@
+pip install transformers accelerate bitsandbytes scipy datasets peft wandb scikit-learn evaluate sacrebleu rouge rouge_score
