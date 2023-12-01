@@ -14,6 +14,7 @@ class mnist_dataset(Dataset):
         self.num_classes = 10
         self.labels_size = 15
         self.num_images = 0
+        self.bw_threshold = 0.5
     def __len__(self):
         return len(self.original_dataset)
 
@@ -29,7 +30,18 @@ class mnist_dataset(Dataset):
             i_quadrant =  random.sample(quadrants, 1)[0]
             quadrants.remove(i_quadrant)
             if i_image == 0:
-                image, label = self.original_dataset[index]
+                theera_or_mnist = random.choice([0,1])
+                if theera_or_mnist == 0:
+                    label = num_images = random.choice([0,1,2,3,4,5,6,7,8,9])
+                    image_path = f'{label}.png'
+                    image = mpimg.imread(image_path)
+                    grid_labels[class_rank_start+label] = 1
+                    image = resize(image,(28,28,1))
+                    image = np.moveaxis(image, -1, 0)
+                    image = torch.tensor(image)
+                else:
+                    image, label = self.original_dataset[index]
+                image = (image >= self.bw_threshold)
                 if num_images<3:
                     random_size = np.random.randint(14, 56)  # Random integer between 14 and 56
                     image = resize(image[0].numpy(), (random_size, random_size))
@@ -38,8 +50,18 @@ class mnist_dataset(Dataset):
                 else:
                     image = self.inject_matrix(i_quadrant,image)
                 grid_labels[class_rank_start+label] = 1
-            if i_image >0:
+            if i_image ==1:
+                label = num_images = random.choice([0,1,2,3,4,5,6,7,8,9])
+                image_path = f'{label}.png'
+                image = mpimg.imread(image_path)
+                image = (image >= self.bw_threshold)
+                grid_labels[class_rank_start+label] = 1
+                image = resize(image,(28,28,1))
+                image = np.moveaxis(image, -1, 0)
+                image = self.inject_matrix(i_quadrant,image)
+            if i_image >1:
                 image, label = self.original_dataset[np.random.randint(256)]
+                image = (image >= self.bw_threshold)
                 grid_labels[class_rank_start+label] = 1
                 image = self.inject_matrix(i_quadrant,image)
             box_center_h, box_center_w, box_h, box_w = self.coordinates_calculation_relative_2_image(image)
@@ -95,30 +117,6 @@ class mnist_dataset(Dataset):
         box_center_w = w_min + 0.5 * box_w
     
         return box_center_h, box_center_w, box_h, box_w
-    # def coordinates_calculation_relative_2_image(self,image):
-    #     h_min = np.Inf
-    #     h_max = -1
-    #     w_min = np.Inf
-    #     w_max = -1
-    #     h_image = image.shape[1]
-    #     w_image = image.shape[2]
-    #     min_found = 0
-    #     for i_h in range(h_image):
-    #         for i_w in range(w_image):
-    #             if image[:,i_h,i_w] != 0:
-    #                 if h_min > i_h:
-    #                     h_min = i_h
-    #                 if w_min > i_w:
-    #                     w_min = i_w
-    #                 if h_min > -1 and i_h > h_max:
-    #                     h_max = i_h
-    #                 if w_min > -1 and i_w > w_max:
-    #                     w_max = i_w
-    #     box_h = h_max - h_min
-    #     box_w = w_max - w_min
-    #     box_center_h = h_min + 0.5*box_h
-    #     box_center_w = w_min + 0.5*box_w
-    #     return box_center_h, box_center_w, box_h, box_w
 
     
     def labels_per_grid(self,image,box_center_h, box_center_w, box_h, box_w, grid_labels):
