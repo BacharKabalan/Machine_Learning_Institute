@@ -119,6 +119,7 @@ class EmbedFC(nn.Module):
 
 class ContextUnet(nn.Module):
     def __init__(self, in_channels, n_feat = 256, n_classes=10, image_height= 28):
+
         super(ContextUnet, self).__init__()
 
         self.in_channels = in_channels
@@ -132,6 +133,9 @@ class ContextUnet(nn.Module):
         self.image_pooling_dimension = int(image_height/4)
         self.to_vec = nn.Sequential(nn.AvgPool2d(self.image_pooling_dimension), nn.GELU())
 
+
+
+
         self.timeembed1 = EmbedFC(1, 2*n_feat)
         self.timeembed2 = EmbedFC(1, 1*n_feat)
         self.contextembed1 = EmbedFC(n_classes, 2*n_feat)
@@ -140,6 +144,7 @@ class ContextUnet(nn.Module):
         self.up0 = nn.Sequential(
             # nn.ConvTranspose2d(6 * n_feat, 2 * n_feat, 7, 7), # when concat temb and cemb end up w 6*n_feat
             nn.ConvTranspose2d(2 * n_feat, 2 * n_feat, self.image_pooling_dimension,self.image_pooling_dimension), # otherwise just have 2*n_feat
+
             nn.GroupNorm(8, 2 * n_feat),
             nn.ReLU(),
         )
@@ -164,6 +169,7 @@ class ContextUnet(nn.Module):
 
         # convert context to one hot embedding
         c = nn.functional.one_hot(c, num_classes=self.n_classes).type(torch.float)
+
         # mask out context if context_mask == 1
         context_mask = context_mask[:, None]
         context_mask = context_mask.repeat(1,self.n_classes)
