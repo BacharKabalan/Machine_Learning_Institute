@@ -6,7 +6,7 @@ ssh -T git@github.com
 
 
 
-su -
+
 apt-get update
 apt-get install sudo
 sudo apt install nano
