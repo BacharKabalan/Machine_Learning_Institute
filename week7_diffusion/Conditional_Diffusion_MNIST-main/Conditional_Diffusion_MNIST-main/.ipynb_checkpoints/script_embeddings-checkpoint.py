@@ -27,8 +27,7 @@ from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
-from label_embedding import label_embedding
-
+import matplot_dataset
 class ResidualConvBlock(nn.Module):
     def __init__(
         self, in_channels: int, out_channels: int, is_res: bool = False
@@ -153,7 +152,7 @@ class ContextUnet(nn.Module):
             nn.Conv2d(n_feat, self.in_channels, 3, 1, 1),
         )
 
-    def forward(self, x, c, t, context_mask, device):
+    def forward(self, x, c, t, context_mask):
         # x is (noisy) image, c is context label, t is timestep, 
         # context_mask says which samples to block the context on
 
@@ -163,11 +162,7 @@ class ContextUnet(nn.Module):
         hiddenvec = self.to_vec(down2)
 
         # convert context to one hot embedding
-        # c = nn.functional.one_hot(c, num_classes=self.n_classes).type(torch.float)
-        c = digit_to_word(c)
-        c = label_embedding(self.n_classes,c)
-        c = torch.tensor(c)
-        c = c.to(device)
+        c = nn.functional.one_hot(c, num_classes=self.n_classes).type(torch.float)
         # mask out context if context_mask == 1
         context_mask = context_mask[:, None]
         context_mask = context_mask.repeat(1,self.n_classes)
@@ -179,7 +174,6 @@ class ContextUnet(nn.Module):
         temb1 = self.timeembed1(t).view(-1, self.n_feat * 2, 1, 1)
         cemb2 = self.contextembed2(c).view(-1, self.n_feat, 1, 1)
         temb2 = self.timeembed2(t).view(-1, self.n_feat, 1, 1)
-
         # could concatenate the context embedding here instead of adaGN
         # hiddenvec = torch.cat((hiddenvec, temb1, cemb1), 1)
 
@@ -252,7 +246,7 @@ class DDPM(nn.Module):
         # dropout context with some probability
         context_mask = torch.bernoulli(torch.zeros_like(c)+self.drop_prob).to(self.device)
         # return MSE between added noise, and our predicted noise
-        return self.loss_mse(noise, self.nn_model(x_t, c, _ts / self.n_T, context_mask, self.device))
+        return self.loss_mse(noise, self.nn_model(x_t, c, _ts / self.n_T, context_mask))
 
     def sample(self, n_sample, size, device, guide_w = 0.0):
         # we follow the guidance sampling scheme described in 'Classifier-Free Diffusion Guidance'
@@ -302,9 +296,6 @@ class DDPM(nn.Module):
         x_i_store = np.array(x_i_store)
         return x_i, x_i_store
 
-
-
-
 def digit_to_word(digit):
     word_dict = {
         '0': 'zero',
@@ -327,10 +318,10 @@ def train_mnist():
 
     # hardcoding these here
     n_epoch = 20
-    batch_size = 16
+    batch_size = 256
     n_T = 400 # 500
     device = "cuda:0"
-    n_classes = 10
+    n_classes = 2
     n_feat = 128 # 128 ok, 256 better (but slower)
     lrate = 1e-4
     save_model = False
@@ -343,9 +334,9 @@ def train_mnist():
     # optionally load a model
     # ddpm.load_state_dict(torch.load("./data/diffusion_outputs/ddpm_unet01_mnist_9.pth"))
 
-    tf = transforms.Compose([transforms.ToTensor(),transforms.Resize((480, 480))]) # mnist is already normalised 0 to 1
+    # tf = transforms.Compose([transforms.ToTensor(),transforms.Resize((28,28))]) # mnist is already normalised 0 to 1
 
-    dataset = MNIST("./data", train=True, download=True, transform=tf)
+    dataset = matplot_dataset.matplot_dataset("image_dataset")
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=5)
     optim = torch.optim.Adam(ddpm.parameters(), lr=lrate)
 
@@ -375,7 +366,7 @@ def train_mnist():
         # followed by real images (bottom rows)
         ddpm.eval()
         with torch.no_grad():
-            n_sample = 1
+            n_sample = 2*n_classes#4*n_classes
             for w_i, w in enumerate(ws_test):
                 x_gen, x_gen_store = ddpm.sample(n_sample, (1, 28, 28), device, guide_w=w)
 

@@ -27,6 +27,7 @@ from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
+import matplot_dataset
 
 class ResidualConvBlock(nn.Module):
     def __init__(
@@ -168,7 +169,6 @@ class ContextUnet(nn.Module):
         context_mask = context_mask.repeat(1,self.n_classes)
         context_mask = (-1*(1-context_mask)) # need to flip 0 <-> 1
         c = c * context_mask
-        
         # embed context, time step
         cemb1 = self.contextembed1(c).view(-1, self.n_feat * 2, 1, 1)
         temb1 = self.timeembed1(t).view(-1, self.n_feat * 2, 1, 1)
@@ -318,17 +318,18 @@ def train_mnist():
 
     # hardcoding these here
     n_epoch = 20
-    batch_size = 256
+    batch_size = 128
     n_T = 400 # 500
     device = "cuda:0"
     n_classes = 10
-    n_feat = 128 # 128 ok, 256 better (but slower)
+    n_feat = 256 # 128 ok, 256 better (but slower)
     lrate = 1e-4
     save_model = False
     save_dir = './data/'
     ws_test = [0.0, 0.5, 2.0] # strength of generative guidance
+    image_shape = (3, 28,28)
 
-    ddpm = DDPM(nn_model=ContextUnet(in_channels=1, n_feat=n_feat, n_classes=n_classes), betas=(1e-4, 0.02), n_T=n_T, device=device, drop_prob=0.1)
+    ddpm = DDPM(nn_model=ContextUnet(in_channels=3, n_feat=n_feat, n_classes=n_classes), betas=(1e-4, 0.02), n_T=n_T, device=device, drop_prob=0.1)
     ddpm.to(device)
 
     # optionally load a model
@@ -336,7 +337,7 @@ def train_mnist():
 
     tf = transforms.Compose([transforms.ToTensor()]) # mnist is already normalised 0 to 1
 
-    dataset = MNIST("./data", train=True, download=True, transform=tf)
+    dataset = matplot_dataset.matplot_dataset("image_dataset")
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=5)
     optim = torch.optim.Adam(ddpm.parameters(), lr=lrate)
 
@@ -351,7 +352,6 @@ def train_mnist():
         loss_ema = None
         for x, c in pbar:
             optim.zero_grad()
-            print(x[0].size())
             x = x.to(device)
             c = c.to(device)
             loss = ddpm(x, c)
@@ -369,7 +369,7 @@ def train_mnist():
         with torch.no_grad():
             n_sample = 4*n_classes
             for w_i, w in enumerate(ws_test):
-                x_gen, x_gen_store = ddpm.sample(n_sample, (1, 28, 28), device, guide_w=w)
+                x_gen, x_gen_store = ddpm.sample(n_sample, image_shape, device, guide_w=w)
 
                 # append some real images at bottom, order by class also
                 x_real = torch.Tensor(x_gen.shape).to(device)
@@ -382,7 +382,7 @@ def train_mnist():
                         x_real[k+(j*n_classes)] = x[idx]
 
                 x_all = torch.cat([x_gen, x_real])
-                grid = make_grid(x_all*-1 + 1, nrow=10)
+                grid = make_grid(x_all*-1 + 1, nrow=10, padding=20, pad_value=1.0, scale_each = True)
                 save_image(grid, save_dir + f"image_ep{ep}_w{w}.png")
                 print('saved image at ' + save_dir + f"image_ep{ep}_w{w}.png")
 
@@ -398,7 +398,7 @@ def train_mnist():
                                 axs[row, col].set_xticks([])
                                 axs[row, col].set_yticks([])
                                 # plots.append(axs[row, col].imshow(x_gen_store[i,(row*n_classes)+col,0],cmap='gray'))
-                                plots.append(axs[row, col].imshow(-x_gen_store[i,(row*n_classes)+col,0],cmap='gray',vmin=(-x_gen_store[i]).min(), vmax=(-x_gen_store[i]).max()))
+                                plots.append(axs[row, col].imshow(-x_gen_store[i,(row*n_classes)+col,0],vmin=(-x_gen_store[i]).min(), vmax=(-x_gen_store[i]).max()))
                         return plots
                     ani = FuncAnimation(fig, animate_diff, fargs=[x_gen_store],  interval=200, blit=False, repeat=True, frames=x_gen_store.shape[0])    
                     ani.save(save_dir + f"gif_ep{ep}_w{w}.gif", dpi=100, writer=PillowWriter(fps=5))
