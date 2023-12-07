@@ -327,7 +327,7 @@ def train_mnist():
 
     # hardcoding these here
     n_epoch = 20
-    batch_size = 256
+    batch_size = 16
     n_T = 400 # 500
     device = "cuda:0"
     n_classes = 10
@@ -375,7 +375,7 @@ def train_mnist():
         # followed by real images (bottom rows)
         ddpm.eval()
         with torch.no_grad():
-            n_sample = 4*n_classes
+            n_sample = 1
             for w_i, w in enumerate(ws_test):
                 x_gen, x_gen_store = ddpm.sample(n_sample, (1, 28, 28), device, guide_w=w)
 
