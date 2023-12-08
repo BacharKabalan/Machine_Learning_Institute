@@ -8,9 +8,10 @@ import random
 
 class matplot_dataset():
     
-    def __init__(self, directory): 
+    def __init__(self, directory,image_height): 
         self.output_dir = directory
         self.image_list = []
+        self.image_height = image_height
         for filename in os.listdir(directory): 
             file_path = os.path.join(directory, filename)
             self.image_list.append(file_path)
@@ -22,7 +23,7 @@ class matplot_dataset():
         image_path = self.image_list[idx]
         label = int(image_path[-5])
         img = Image.open(image_path)
-        transform =transforms.Compose([transforms.ToTensor(),transforms.Resize((28,28))])
+        transform =transforms.Compose([transforms.ToTensor(),transforms.Resize((self.image_height,self.image_height))])
         
         # Apply the transformation to the image
         tensor_image = transform(img)

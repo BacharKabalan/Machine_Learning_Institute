@@ -118,7 +118,7 @@ class EmbedFC(nn.Module):
 
 
 class ContextUnet(nn.Module):
-    def __init__(self, in_channels, n_feat = 256, n_classes=10):
+    def __init__(self, in_channels, n_feat = 256, n_classes=10, image_height= 28):
         super(ContextUnet, self).__init__()
 
         self.in_channels = in_channels
@@ -129,8 +129,8 @@ class ContextUnet(nn.Module):
 
         self.down1 = UnetDown(n_feat, n_feat)
         self.down2 = UnetDown(n_feat, 2 * n_feat)
-
-        self.to_vec = nn.Sequential(nn.AvgPool2d(7), nn.GELU())
+        self.image_pooling_dimension = int(image_height/4)
+        self.to_vec = nn.Sequential(nn.AvgPool2d(self.image_pooling_dimension), nn.GELU())
 
         self.timeembed1 = EmbedFC(1, 2*n_feat)
         self.timeembed2 = EmbedFC(1, 1*n_feat)
@@ -139,7 +139,7 @@ class ContextUnet(nn.Module):
 
         self.up0 = nn.Sequential(
             # nn.ConvTranspose2d(6 * n_feat, 2 * n_feat, 7, 7), # when concat temb and cemb end up w 6*n_feat
-            nn.ConvTranspose2d(2 * n_feat, 2 * n_feat, 7, 7), # otherwise just have 2*n_feat
+            nn.ConvTranspose2d(2 * n_feat, 2 * n_feat, self.image_pooling_dimension,self.image_pooling_dimension), # otherwise just have 2*n_feat
             nn.GroupNorm(8, 2 * n_feat),
             nn.ReLU(),
         )
@@ -318,7 +318,7 @@ def train_mnist():
 
     # hardcoding these here
     n_epoch = 20
-    batch_size = 128
+    batch_size = 8
     n_T = 400 # 500
     device = "cuda:0"
     n_classes = 10
@@ -327,9 +327,9 @@ def train_mnist():
     save_model = False
     save_dir = './data/'
     ws_test = [0.0, 0.5, 2.0] # strength of generative guidance
-    image_shape = (3, 28,28)
+    image_shape = (3,112,112)
 
-    ddpm = DDPM(nn_model=ContextUnet(in_channels=3, n_feat=n_feat, n_classes=n_classes), betas=(1e-4, 0.02), n_T=n_T, device=device, drop_prob=0.1)
+    ddpm = DDPM(nn_model=ContextUnet(in_channels=3, n_feat=n_feat, n_classes=n_classes, image_height = image_shape[-1]), betas=(1e-4, 0.02), n_T=n_T, device=device, drop_prob=0.1)
     ddpm.to(device)
 
     # optionally load a model
@@ -337,7 +337,7 @@ def train_mnist():
 
     tf = transforms.Compose([transforms.ToTensor()]) # mnist is already normalised 0 to 1
 
-    dataset = matplot_dataset.matplot_dataset("image_dataset")
+    dataset = matplot_dataset.matplot_dataset("image_dataset",image_height = image_shape[-1])
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=5)
     optim = torch.optim.Adam(ddpm.parameters(), lr=lrate)
 
